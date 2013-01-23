@@ -221,122 +221,121 @@ class Facility extends \Tillikum_Form
             ->getQuery()
             ->getResult();
 
-        $allStarts = array($bookingRange->getStart());
-        $allEnds = array($bookingRange->getEnd());
-
-        foreach ($bookings as $booking) {
-            $allStarts[] = $booking->start;
-            $allEnds[] = $booking->end;
-        }
-
+        $configCapacity = PHP_INT_MAX;
         foreach ($configs as $config) {
-            $allStarts[] = $config->start;
-            $allEnds[] = $config->end;
-        }
+            $configCapacity = min($configCapacity, $config->capacity);
 
-        foreach ($holds as $hold) {
-            $allStarts[] = $hold->start;
-            $allEnds[] = $hold->end;
-        }
-
-        sort($allStarts);
-        sort($allEnds);
-
-        $allDateRanges = array();
-        for ($i = 0; $i < count($allStarts); $i += 1) {
-            $allDateRanges[] = new DateRange($allStarts[$i], $allEnds[$i]);
-        }
-
-        foreach ($allDateRanges as $range) {
-            $bookingCount = $holdCount = 0;
-            $configCapacity = PHP_INT_MAX;
-
-            foreach ($bookings as $booking) {
-                $testBookingRange = new DateRange(
-                    $booking->start,
-                    $booking->end
-                );
-
-                if (!$testBookingRange->overlaps($range)) {
-                    continue;
-                }
-
-                $bookingCount += 1;
-
-                if (!empty($booking->person->gender)) {
-                    $bookingGenderSpec = isset($bookingGenderSpec)
-                        ? $bookingGenderSpec->andSpec(new GenderMatchSpecification($booking->person->gender))
-                        : new GenderMatchSpecification($booking->person->gender);
-                }
+            if (!empty($config->gender)) {
+                $facilityGenderSpec = isset($facilityGenderSpec)
+                    ? $facilityGenderSpec->andSpec(new GenderMatchSpecification($config->gender))
+                    : new GenderMatchSpecification($config->gender);
             }
 
-            foreach ($configs as $config) {
-                $testConfigRange = new DateRange(
-                    $config->start,
-                    $config->end
-                );
+            if (!empty($config->suite)) {
+                $suiteConfigs = $this->em->createQueryBuilder()
+                    ->select('c')
+                    ->from('Tillikum\Entity\Facility\Config\Room\Room', 'c')
+                    ->where('c.start <= :proposedEnd')
+                    ->andWhere('c.end >= :proposedStart')
+                    ->andWhere('c.suite = :suite')
+                    ->setParameter('proposedStart', $bookingRange->getStart())
+                    ->setParameter('proposedEnd', $bookingRange->getEnd())
+                    ->setParameter('suite', $config->suite)
+                    ->getQuery()
+                    ->getResult();
 
-                if (!$testConfigRange->overlaps($range)) {
-                    continue;
-                }
-
-                $configCapacity = min($configCapacity, $config->capacity);
-
-                if (!empty($config->gender)) {
-                    $facilityGenderSpec = isset($facilityGenderSpec)
-                        ? $facilityGenderSpec->andSpec(new GenderMatchSpecification($config->gender))
-                        : new GenderMatchSpecification($config->gender);
-                }
-
-                if (!empty($config->suite)) {
-                    $suiteConfigs = $this->em->createQueryBuilder()
-                        ->select('c')
-                        ->from('Tillikum\Entity\Facility\Config\Room\Room', 'c')
-                        ->where('c.start <= :proposedEnd')
-                        ->andWhere('c.end >= :proposedStart')
-                        ->andWhere('c.suite = :suite')
-                        ->setParameter('proposedStart', $bookingRange->getStart())
-                        ->setParameter('proposedEnd', $bookingRange->getEnd())
-                        ->setParameter('suite', $config->suite)
-                        ->getQuery()
-                        ->getResult();
-
-                    foreach ($suiteConfigs as $suiteConfig) {
-                        $testConfigRange = new DateRange(
-                            $suiteConfig->start,
-                            $suiteConfig->end
-                        );
-
-                        if (!empty($suiteConfig->gender)) {
-                            $suiteGenderSpec = isset($suiteGenderSpec)
-                                ? $suiteGenderSpec->andSpec(new GenderMatchSpecification($suiteConfig->gender))
-                                : new GenderMatchSpecification($suiteConfig->gender);
-                        }
+                foreach ($suiteConfigs as $suiteConfig) {
+                    if (!empty($suiteConfig->gender)) {
+                        $suiteGenderSpec = isset($suiteGenderSpec)
+                            ? $suiteGenderSpec->andSpec(new GenderMatchSpecification($suiteConfig->gender))
+                            : new GenderMatchSpecification($suiteConfig->gender);
                     }
                 }
             }
+        }
 
-            foreach ($holds as $hold) {
-                $testHoldRange = new DateRange(
-                    $hold->start,
-                    $hold->end
-                );
+        $bookingMoments = array();
+        foreach ($bookings as $booking) {
+            $bookingMoments[] = array(
+                'date' => $booking->start,
+                'value' => 1
+            );
+            $bookingMoments[] = array(
+                'date' => $booking->end,
+                'value' => -1
+            );
+        }
 
-                if (!$testHoldRange->overlaps($range)) {
-                    continue;
+        $holdMoments = array();
+        foreach ($holds as $hold) {
+            $holdMoments[] = array(
+                'date' => $hold->start,
+                'value' => $hold->space,
+            );
+            $holdMoments[] = array(
+                'date' => $hold->end,
+                'value' => $hold->space * -1,
+            );
+        }
+
+        $customSort = function ($a, $b) {
+            if ($a['date'] == $b['date']) {
+                if ($a['value'] == $b['value']) {
+                    return 0;
                 }
 
-                $holdCount += $hold->space;
-
-                if (!empty($hold->gender)) {
-                    $holdGenderSpec = isset($holdGenderSpec)
-                        ? $holdGenderSpec->andSpec(new GenderMatchSpecification($hold->gender))
-                        : new GenderMatchSpecification($hold->gender);
-                }
+                // Positive values come first, so same-day start/ends are
+                // incremented before they are decremented
+                return $a['value'] > $b['value'] ? -1 : 1;
             }
 
-            if ($bookingCount + $holdCount >= $configCapacity) {
-                $this->facility_name->addError(sprintf(
+            return $a['date'] < $b['date'] ? -1 : 1;
+        };
+
+        usort($bookingMoments, $customSort);
+        usort($holdMoments, $customSort);
+
+        $currentBookingCount = 0;
+        $highestBookingCount = 0;
+        foreach ($bookingMoments as $moment) {
+            $currentBookingCount += $moment['value'];
+
+            $highestBookingCount = max(
+                $highestBookingCount,
+                $currentBookingCount
+            );
+        }
+
+        $currentHoldCount = 0;
+        $highestHoldCount = 0;
+        foreach ($holdMoments as $moment) {
+            $currentHoldCount += $moment['value'];
+
+            $highestHoldCount = max(
+                $highestHoldCount,
+                $currentHoldCount
+            );
+        }
+
+        foreach ($bookings as $booking) {
+            if (!empty($booking->person->gender)) {
+                $bookingGenderSpec = isset($bookingGenderSpec)
+                    ? $bookingGenderSpec->andSpec(new GenderMatchSpecification($booking->person->gender))
+                    : new GenderMatchSpecification($booking->person->gender);
+            }
+        }
+
+        foreach ($holds as $hold) {
+            if (!empty($hold->gender)) {
+                $holdGenderSpec = isset($holdGenderSpec)
+                    ? $holdGenderSpec->andSpec(new GenderMatchSpecification($hold->gender))
+                    : new GenderMatchSpecification($hold->gender);
+            }
+        }
+
+        if ($highestBookingCount + $highestHoldCount >= $configCapacity) {
+            $this->facility_name->addError(
+                sprintf(
                     $this->getTranslator()->translate(
                         'There is no available space in this facility to book another'
                       . ' resident during the specified time period. The minimum'
@@ -344,12 +343,12 @@ class Facility extends \Tillikum_Form
                       . ' and %s held spaces for that period of time.'
                     ),
                     $configCapacity,
-                    $bookingCount,
-                    $holdCount
-                ));
+                    $highestBookingCount,
+                    $highestHoldCount
+                )
+            );
 
-                return false;
-            }
+            return false;
         }
 
         if (isset($bookingGenderSpec) && !$bookingGenderSpec->isSatisfiedBy($person->gender)) {
