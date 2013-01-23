@@ -49,7 +49,10 @@ class BillingEventProcessor extends AbstractJob
         fputcsv(
             $csvResource,
             array(
-                'Invoicee name',
+                'Event ID',
+                'Invoicee ID',
+                'Invoicee family name',
+                'Invoicee given name',
                 'Invoice description',
                 'Entry currency',
                 'Entry amount',
@@ -192,7 +195,10 @@ class BillingEventProcessor extends AbstractJob
                 fputcsv(
                     $csvResource,
                     array(
-                        $invoice->person->display_name,
+                        $event->id,
+                        $invoice->person->id,
+                        $invoice->person->family_name,
+                        $invoice->person->given_name,
                         $invoice->description,
                         $entry->currency,
                         $entry->amount,
