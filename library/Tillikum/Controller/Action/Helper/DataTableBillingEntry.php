@@ -26,6 +26,7 @@ class DataTableBillingEntry extends AbstractHelper
         foreach ($entries as $entry) {
             $rows[] = array(
                 'amount' => $entry->amount,
+                'code' => $entry->code,
                 'created_at' => $entry->created_at,
                 'created_by' => $entry->created_by,
                 'currency' => $entry->currency,
