@@ -59,6 +59,11 @@ class Person extends Entity
     protected $display_name;
 
     /**
+     * @ORM\Column(nullable=true, type="date")
+     */
+    protected $birthdate;
+
+    /**
      * @ORM\Column(nullable=true)
      */
     protected $gender;
