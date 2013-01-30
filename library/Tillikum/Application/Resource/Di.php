@@ -11,6 +11,7 @@ namespace Tillikum\Application\Resource;
 
 use Zend\Db;
 use Zend\Di as ZendDi;
+use Zend\Session;
 
 class Di extends \Zend_Application_Resource_ResourceAbstract
 {
@@ -50,6 +51,10 @@ class Di extends \Zend_Application_Resource_ResourceAbstract
         $di->instanceManager()->addSharedInstance(
             $di,
             'Di'
+        );
+
+        Session\Container::setDefaultManager(
+            $di->get('Zend\Session\SessionManager')
         );
 
         return $di;

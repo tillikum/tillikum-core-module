@@ -26,8 +26,9 @@ class CasAuthentication extends AbstractPlugin
         $bootstrap = $frontController->getParam('bootstrap');
         $serviceManager = $bootstrap->getResource('ServiceManager');
 
-        $authService = $serviceManager->get('Di')
-            ->get('Zend\Authentication\AuthenticationService');
+        $authService = $serviceManager->get(
+            'Zend\Authentication\AuthenticationService'
+        );
 
         if (!$authService->hasIdentity()) {
             $response = $this->getResponse();
