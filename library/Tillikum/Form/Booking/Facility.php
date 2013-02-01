@@ -35,8 +35,8 @@ class Facility extends \Tillikum_Form
 
         $this->start->setValue($booking->start ? $booking->start->format('Y-m-d') : '');
         $this->end->setValue($booking->end ? $booking->end->format('Y-m-d') : '');
-        $this->checkin_at->setValue($booking->checkin_at ? $booking->checkin_at->format('c') : '');
-        $this->checkout_at->setValue($booking->checkout_at ? $booking->checkout_at->format('c') : '');
+        $this->checkin_at->setValue($booking->checkin_at ? date('c', $booking->checkin_at->format('U')) : '');
+        $this->checkout_at->setValue($booking->checkout_at ? date('c', $booking->checkout_at->format('U')) : '');
         $this->note->setValue($booking->note);
 
         return $this;
