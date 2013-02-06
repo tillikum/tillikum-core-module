@@ -16,11 +16,6 @@ class DataTableBillingEntry extends AbstractHelper
     public function dataTableBillingEntry($entries)
     {
         $ac = $this->_actionController;
-        $view = $ac->view;
-
-        if (count($entries) === 0) {
-            return array();
-        }
 
         $rows = array();
         foreach ($entries as $entry) {
@@ -32,6 +27,7 @@ class DataTableBillingEntry extends AbstractHelper
                 'currency' => $entry->currency,
                 'description' => $entry->description,
                 'id' => $entry->id,
+                'invoice' => $entry->invoice ? $entry->invoice->description : '',
             );
         }
 
