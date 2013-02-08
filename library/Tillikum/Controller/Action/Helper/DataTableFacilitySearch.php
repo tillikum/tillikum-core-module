@@ -29,7 +29,6 @@ class DataTableFacilitySearch extends AbstractHelper
             $row = array(
                 'actions' => $actions,
                 'availableSpace' => $datum['availableSpace'],
-                'bookingCount' => $datum['bookingCount'],
                 'capacity' => $config->capacity,
                 'end' => $config->end ?: new DateTime('2099-01-01'),
                 'facility_group' => $config->facility->facility_group->getConfigOnDate($config->start)->name,
