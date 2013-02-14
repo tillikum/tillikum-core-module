@@ -44,4 +44,9 @@ class Relation extends Entity
      * @ORM\JoinColumn(name="tail_id", referencedColumnName="id")
      */
     protected $tail;
+
+    /**
+     * @ORM\Column(type="boolean")
+     */
+    protected $is_active;
 }
