@@ -190,6 +190,28 @@ class Person extends Entity
     }
 
     /**
+     * Determines a person’s age from their date of birth
+     *
+     * If passed, the first parameter will be used as the assumed "current" day
+     * with regard to the calculation. Otherwise, the current day will be used.
+     *
+     * If no date of birth exists, NAN will be returned.
+     *
+     * @param $date Current date for the calculation
+     * @return int|NAN
+     */
+    public function getAge(DateTime $date = null)
+    {
+        if (($birthdate = $this->birthdate) === null) {
+            return NAN;
+        }
+
+        $date = $date ?: new DateTime(date('Y-m-d'));
+
+        return (int) $birthdate->diff($date)->y;
+    }
+
+    /**
      * Fetch the user’s display name, if it exists
      *
      * If the display name does not exist, it will format the user’s name as
