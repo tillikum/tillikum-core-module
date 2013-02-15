@@ -60,6 +60,16 @@ class BookingProcessorTest extends \PHPUnit_Framework_TestCase
         $this->event->rule = $rule;
     }
 
+    public function testHandlesEmptyDateRange()
+    {
+        $this->event->start = new DateTime('2010-07-02');
+        $this->event->end = new DateTime('2010-07-01');
+
+        $entries = $this->processor->process($this->event);
+
+        $this->assertEquals(0, count($entries));
+    }
+
     public function testHandlesSingleReturnedEntry()
     {
         $this->mock

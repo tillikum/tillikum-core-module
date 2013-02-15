@@ -26,12 +26,16 @@ class BookingProcessor extends AbstractProcessor
      */
     public function process(Event $event)
     {
-        $entries = new ArrayCollection;
+        $entries = new ArrayCollection();
 
         $eventRange = new DateRange(
             $event->start,
             $event->end
         );
+
+        if ($eventRange->isEmpty()) {
+            return $entries;
+        }
 
         $rule = $event->rule;
 
