@@ -44,6 +44,7 @@ class DataTableFacilityConfiguration extends AbstractHelper
         $view = $ac->view;
 
         $actions = array(
+            'copy' => $ac->getAcl()->isAllowed('_user', 'facility', 'write'),
             'delete' => $ac->getAcl()->isAllowed('_user', 'facility', 'write'),
             'edit' => $ac->getAcl()->isAllowed('_user', 'facility', 'write')
         );
@@ -78,6 +79,12 @@ class DataTableFacilityConfiguration extends AbstractHelper
                     'module' => 'facility',
                     'controller' => 'facilityconfig',
                     'action' => 'edit',
+                    'id' => $config->id
+                ), null, true),
+                'copy_uri' => $view->url(array(
+                    'module' => 'facility',
+                    'controller' => 'facilityconfig',
+                    'action' => 'copy',
                     'id' => $config->id
                 ), null, true),
             );
