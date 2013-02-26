@@ -13,41 +13,39 @@ use Doctrine\ORM\EntityRepository;
 
 class Person extends EntityRepository
 {
-    public function createSearchQueryBuilder($input)
+    public function getAutocompleteQuery($input)
     {
         $input = trim($input);
         $input = preg_replace('/\s{2,}/', ' ', $input);
         $input = preg_replace('/,\s?/', ' ', $input);
 
         $qb = $this->getEntityManager()
-        ->createQueryBuilder();
+            ->createQueryBuilder();
 
-        $qb->where(
-            $qb->expr()->orX(
-                $qb->expr()->like(
-                    $qb->expr()->concat(
-                        'COALESCE(p.given_name, \'\')', $qb->expr()->concat(
-                            $qb->expr()->literal(' '), 'COALESCE(p.family_name, \'\')'
-                        )
-                    ),
-                    ':input'
-                ),
-                $qb->expr()->like(
-                    $qb->expr()->concat(
-                        'COALESCE(p.family_name, \'\')', $qb->expr()->concat(
-                            $qb->expr()->literal(' '), $qb->expr()->concat(
-                                'COALESCE(p.given_name, \'\')', $qb->expr()->concat(
-                                    $qb->expr()->literal(' '), 'COALESCE(p.middle_name, \'\')'
-                                )
+        $qb->select('p')
+            ->from('Tillikum\Entity\Person\Person', 'p')
+            ->where(
+                $qb->expr()->orX(
+                    $qb->expr()->like(
+                        $qb->expr()->concat(
+                            'COALESCE(p.given_name, \'\')', $qb->expr()->concat(
+                                $qb->expr()->literal(' '), 'COALESCE(p.family_name, \'\')'
                             )
-                        )
+                        ),
+                        ':input'
                     ),
-                    ':input'
+                    $qb->expr()->like(
+                        $qb->expr()->concat(
+                            'COALESCE(p.family_name, \'\')', $qb->expr()->concat(
+                                $qb->expr()->literal(' '), 'COALESCE(p.given_name, \'\')'
+                            )
+                        ),
+                        ':input'
+                    )
                 )
             )
-        )
-        ->setParameter('input', $input . '%');
+            ->setParameter('input', $input . '%');
 
-        return $qb;
+        return $qb->getQuery();
     }
 }
