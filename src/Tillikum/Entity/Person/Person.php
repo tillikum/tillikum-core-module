@@ -121,6 +121,11 @@ class Person extends Entity
     protected $emergency_contacts;
 
     /**
+     * @ORM\OneToMany(targetEntity="Tillikum\Entity\Person\File\File", mappedBy="person", cascade={"all"})
+     */
+    protected $files;
+
+    /**
      * @ORM\OneToOne(targetEntity="Image", mappedBy="person", cascade={"all"})
      */
     protected $image;
