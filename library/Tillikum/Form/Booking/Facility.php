@@ -164,13 +164,16 @@ class Facility extends \Tillikum_Form
         $endDate = new DateTime($data['end']);
 
         if ($startDate > $endDate) {
-            $this->start->addError($this->getTranslator()->translate(
-                'The start date must be on or before the end date.'
+            $this->start->addError(
+                $this->getTranslator()->translate(
+                    'The start date must be on or before the end date.'
             ));
 
-            $this->end->addError($this->getTranslator()->translate(
-                'The end date must be on or after the start date.'
-            ));
+            $this->end->addError(
+                $this->getTranslator()->translate(
+                    'The end date must be on or after the start date.'
+                )
+            );
 
             return false;
         }
@@ -254,25 +257,24 @@ class Facility extends \Tillikum_Form
             }
         }
 
-        $bookingMoments = array();
+        $moments = array();
         foreach ($bookings as $booking) {
-            $bookingMoments[] = array(
+            $moments[] = array(
                 'date' => $booking->start,
                 'value' => 1
             );
-            $bookingMoments[] = array(
+            $moments[] = array(
                 'date' => $booking->end,
                 'value' => -1
             );
         }
 
-        $holdMoments = array();
         foreach ($holds as $hold) {
-            $holdMoments[] = array(
+            $moments[] = array(
                 'date' => $hold->start,
                 'value' => $hold->space,
             );
-            $holdMoments[] = array(
+            $moments[] = array(
                 'date' => $hold->end,
                 'value' => $hold->space * -1,
             );
@@ -292,29 +294,18 @@ class Facility extends \Tillikum_Form
             return $a['date'] < $b['date'] ? -1 : 1;
         };
 
-        usort($bookingMoments, $customSort);
-        usort($holdMoments, $customSort);
+        usort($moments, $customSort);
 
-        $currentBookingCount = 0;
-        $highestBookingCount = 0;
-        foreach ($bookingMoments as $moment) {
-            $currentBookingCount += $moment['value'];
+        $currentCount = 0;
+        $highestCount = 0;
+        $highestStart = null;
+        foreach ($moments as $moment) {
+            $currentCount += $moment['value'];
 
-            $highestBookingCount = max(
-                $highestBookingCount,
-                $currentBookingCount
-            );
-        }
-
-        $currentHoldCount = 0;
-        $highestHoldCount = 0;
-        foreach ($holdMoments as $moment) {
-            $currentHoldCount += $moment['value'];
-
-            $highestHoldCount = max(
-                $highestHoldCount,
-                $currentHoldCount
-            );
+            if ($currentCount > $highestCount) {
+                $highestStart = $moment['date'];
+                $highestCount = $currentCount;
+            }
         }
 
         foreach ($bookings as $booking) {
@@ -333,18 +324,18 @@ class Facility extends \Tillikum_Form
             }
         }
 
-        if ($highestBookingCount + $highestHoldCount >= $configCapacity) {
+        if ($highestCount >= $configCapacity) {
             $this->facility_name->addError(
                 sprintf(
                     $this->getTranslator()->translate(
                         'There is no available space in this facility to book another'
                       . ' resident during the specified time period. The minimum'
                       . ' configured space is %s, but there are %s bookings'
-                      . ' and %s held spaces for that period of time.'
+                      . ' and/or held spaces starting on %s.'
                     ),
                     $configCapacity,
-                    $highestBookingCount,
-                    $highestHoldCount
+                    $highestCount,
+                    $highestStart ? $highestStart->format('Y-m-d') : '[no date]'
                 )
             );
 
@@ -352,47 +343,55 @@ class Facility extends \Tillikum_Form
         }
 
         if (isset($bookingGenderSpec) && !$bookingGenderSpec->isSatisfiedBy($person->gender)) {
-            $this->addWarning(sprintf(
-                $this->getTranslator()->translate(
-                    'The person you are booking with gender %s did not meet the gender'
-                  . ' requirements of the other people booked to this facility for the'
-                  . ' specified time period.'
-                ),
-                $person->gender
-            ));
+            $this->addWarning(
+                sprintf(
+                    $this->getTranslator()->translate(
+                        'The person you are booking with gender %s did not meet' .
+                        ' the gender requirements of the other people booked' .
+                        ' to this facility for the desired time period.'
+                    ),
+                    $person->gender
+                )
+            );
         }
 
         if (isset($facilityGenderSpec) && !$facilityGenderSpec->isSatisfiedBy($person->gender)) {
-            $this->addWarning(sprintf(
-                $this->getTranslator()->translate(
-                    'The person you are booking with gender %s did not meet the gender'
-                  . ' requirements of the configurations for this facility for the'
-                  . ' specified time period.'
-                ),
-                $person->gender
-            ));
+            $this->addWarning(
+                sprintf(
+                    $this->getTranslator()->translate(
+                        'The person you are booking with gender %s did not meet' .
+                        ' the gender requirements of the configurations for this' .
+                        ' facility for the desired time period.'
+                    ),
+                    $person->gender
+                )
+            );
         }
 
         if (isset($holdGenderSpec) && !$holdGenderSpec->isSatisfiedBy($person->gender)) {
-            $this->addWarning(sprintf(
-                $this->getTranslator()->translate(
-                    'The person you are booking with gender %s did not meet the gender'
-                  . ' requirements of the holds on this facility for the'
-                  . ' specified time period.'
-                ),
-                $person->gender
-            ));
+            $this->addWarning(
+                sprintf(
+                    $this->getTranslator()->translate(
+                        'The person you are booking with gender %s did not meet' .
+                        ' the gender requirements of the holds on this facility' .
+                        ' for the desired time period.'
+                    ),
+                    $person->gender
+                )
+            );
         }
 
         if (isset($suiteGenderSpec) && !$suiteGenderSpec->isSatisfiedBy($person->gender)) {
-            $this->addWarning(sprintf(
-                $this->getTranslator()->translate(
-                    'The person you are booking with gender %s did not meet the gender'
-                  . ' requirements of the other people booked to this suite for the'
-                  . ' specified time period.'
-                ),
-                $person->gender
-            ));
+            $this->addWarning(
+                sprintf(
+                    $this->getTranslator()->translate(
+                        'The person you are booking with gender %s did not meet' .
+                        ' the gender requirements of the other people booked to' .
+                        ' this suite for the specified time period.'
+                    ),
+                    $person->gender
+                )
+            );
         }
 
         return true;

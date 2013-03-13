@@ -198,13 +198,17 @@ class Config extends \Tillikum_Form
         $endDate = new DateTime($data['end']);
 
         if ($startDate > $endDate) {
-            $this->start->addError($this->getTranslator()->translate(
-                'The start date must be on or before the end date.'
-            ));
+            $this->start->addError(
+                $this->getTranslator()->translate(
+                    'The start date must be on or before the end date.'
+                )
+            );
 
-            $this->end->addError($this->getTranslator()->translate(
-                'The end date must be on or after the start date.'
-            ));
+            $this->end->addError(
+                $this->getTranslator()->translate(
+                    'The end date must be on or after the start date.'
+                )
+            );
 
             return false;
         }
@@ -300,25 +304,24 @@ class Config extends \Tillikum_Form
             }
         }
 
-        $bookingMoments = array();
+        $moments = array();
         foreach ($bookings as $booking) {
-            $bookingMoments[] = array(
+            $moments[] = array(
                 'date' => $booking->start,
                 'value' => 1
             );
-            $bookingMoments[] = array(
+            $moments[] = array(
                 'date' => $booking->end,
                 'value' => -1
             );
         }
 
-        $holdMoments = array();
         foreach ($holds as $hold) {
-            $holdMoments[] = array(
+            $moments[] = array(
                 'date' => $hold->start,
                 'value' => $hold->space,
             );
-            $holdMoments[] = array(
+            $moments[] = array(
                 'date' => $hold->end,
                 'value' => $hold->space * -1,
             );
@@ -338,29 +341,18 @@ class Config extends \Tillikum_Form
             return $a['date'] < $b['date'] ? -1 : 1;
         };
 
-        usort($bookingMoments, $customSort);
-        usort($holdMoments, $customSort);
+        usort($moments, $customSort);
 
-        $currentBookingCount = 0;
-        $highestBookingCount = 0;
-        foreach ($bookingMoments as $moment) {
-            $currentBookingCount += $moment['value'];
+        $currentCount = 0;
+        $highestCount = 0;
+        $highestStart = null;
+        foreach ($moments as $moment) {
+            $currentCount += $moment['value'];
 
-            $highestBookingCount = max(
-                $highestBookingCount,
-                $currentBookingCount
-            );
-        }
-
-        $currentHoldCount = 0;
-        $highestHoldCount = 0;
-        foreach ($holdMoments as $moment) {
-            $currentHoldCount += $moment['value'];
-
-            $highestHoldCount = max(
-                $highestHoldCount,
-                $currentHoldCount
-            );
+            if ($currentCount > $highestCount) {
+                $highestStart = $moment['date'];
+                $highestCount = $currentCount;
+            }
         }
 
         foreach ($bookings as $booking) {
@@ -379,17 +371,16 @@ class Config extends \Tillikum_Form
             }
         }
 
-        if ($highestBookingCount + $highestHoldCount > $data['capacity']) {
+        if ($highestCount > $data['capacity']) {
             $this->capacity->addError(
                 sprintf(
                     $this->getTranslator()->translate(
                         'There are too many claims on space in this facility to'
                       . ' change the capacity of this configuration. There are'
-                      . ' %s bookings and %s held spaces for the period of time'
-                      . ' over which you want to configure the space.'
+                      . ' %s bookings and/or held spaces starting on %s.'
                     ),
-                    $highestBookingCount,
-                    $highestHoldCount
+                    $highestCount,
+                    $highestStart ? $highestStart->format('Y-m-d') : '[no date]'
                 )
             );
 
@@ -397,32 +388,37 @@ class Config extends \Tillikum_Form
         }
 
         if (isset($holdGenderSpec) && !$holdGenderSpec->isSatisfiedBy($data['gender'])) {
-            $this->addWarning(sprintf(
-                $this->getTranslator()->translate(
-                    'The facility gender does not match the gender requirements of'
-                 . ' a hold on the facility for the specified time period.'
+            $this->addWarning(
+                sprintf(
+                    $this->getTranslator()->translate(
+                        'The desired configuration gender does not meet the' .
+                        ' gender requirements of an overlapping facility hold.'
+                   )
                )
-           ));
+           );
         }
 
         if (isset($bookingGenderSpec) && !$bookingGenderSpec->isSatisfiedBy($data['gender'])) {
-            $this->addWarning(sprintf(
-                $this->getTranslator()->translate(
-                    'The facility gender does not meet the gender requirements of'
-                  . ' the people booked to the space over the specified time'
-                  . ' period.'
+            $this->addWarning(
+                sprintf(
+                    $this->getTranslator()->translate(
+                        'The desired configuration gender does not meet the' .
+                        ' gender requirements of an overlapping booking.'
+                    )
                 )
-            ));
+            );
         }
 
         if (isset($suiteGenderSpec) && !$suiteGenderSpec->isSatisfiedBy($data['gender'])) {
-            $this->addWarning(sprintf(
-                $this->getTranslator()->translate(
-                    'The facility gender does not meet the gender requirements of'
-                  . ' the people booked to the a suite related to this space over'
-                  . ' the specified time period.'
+            $this->addWarning(
+                sprintf(
+                    $this->getTranslator()->translate(
+                        'The desired configuration gender does not meet the' .
+                        ' gender requirements of an overlapping booking in a' .
+                        ' related suite.'
+                    )
                 )
-            ));
+            );
         }
 
         return true;
