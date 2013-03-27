@@ -11,6 +11,9 @@ namespace Tillikum\Entity\Billing\Rule\Config;
 
 use Doctrine\ORM\Mapping as ORM;
 
+/**
+ * ORM\MappedSuperclass
+ */
 class AbstractBooking extends Config
 {
     /**

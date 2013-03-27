@@ -17,6 +17,8 @@ use Doctrine\ORM\Mapping as ORM;
  */
 class FacilityBooking extends AbstractBooking
 {
+    const FORM_CLASS = 'Tillikum\Form\Billing\Config\FacilityBooking';
+
     /**
      * @ORM\ManyToOne(targetEntity="Tillikum\Entity\Billing\Rule\FacilityBooking", inversedBy="configs")
      * @ORM\JoinColumn(name="rule_id", referencedColumnName="id")

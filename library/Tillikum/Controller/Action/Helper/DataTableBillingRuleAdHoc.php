@@ -18,6 +18,7 @@ class DataTableBillingRuleAdHoc extends AbstractHelper
         $actionController = $this->_actionController;
 
         $actions = array(
+            'copy' => $actionController->getAcl()->isAllowed('_user', 'billing_rule', 'write'),
             'edit' => $actionController->getAcl()->isAllowed('_user', 'billing_rule', 'write'),
             'view' => $actionController->getAcl()->isAllowed('_user', 'billing_rule', 'read'),
         );

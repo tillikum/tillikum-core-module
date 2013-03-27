@@ -17,6 +17,8 @@ use Doctrine\ORM\Mapping as ORM;
  */
 class AdHoc extends Config
 {
+    const FORM_CLASS = 'Tillikum\Form\Billing\Config\AdHoc';
+
     /**
      * @ORM\ManyToOne(targetEntity="Tillikum\Entity\Billing\Rule\AdHoc", inversedBy="configs")
      * @ORM\JoinColumn(name="rule_id", referencedColumnName="id")
