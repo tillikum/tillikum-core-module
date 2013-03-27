@@ -133,19 +133,31 @@ class AdHocEvent extends \Tillikum_Form
 
         $rules = $this->em->createQuery(
             "
-            SELECT r.id, r.description
+            SELECT r.id,
+                   r.description,
+                   (
+                       SELECT COUNT(c)
+                       FROM Tillikum\Entity\Billing\Rule\Config\AdHoc c
+                       JOIN c.rule rInner
+                       WHERE r = rInner AND c.end >= :currentDate
+                   ) AS hasCurrentConfig
             FROM Tillikum\Entity\Billing\Rule\AdHoc r
-            ORDER BY r.description
+            ORDER BY r.description ASC
             "
         )
+            ->setParameter('currentDate', new DateTime())
             ->getResult();
 
-        $ruleOptions = array();
+        $multiOptions = array('Active (as of today)' => array(), 'Archived' => array(),);
         foreach ($rules as $rule) {
-            $ruleOptions[$rule['id']] = $rule['description'];
+            if ($rule['hasCurrentConfig'] > 0) {
+                $multiOptions['Active (as of today)'][$rule['id']] = $rule['description'];
+            } else {
+                $multiOptions['Archived'][$rule['id']] = $rule['description'];
+            }
         }
 
-        $this->rule_id->setMultiOptions($ruleOptions);
+        $this->rule_id->setMultiOptions($multiOptions);
 
         return $this;
     }

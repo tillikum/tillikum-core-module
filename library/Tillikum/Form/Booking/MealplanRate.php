@@ -9,6 +9,7 @@
 
 namespace Tillikum\Form\Booking;
 
+use DateTime;
 use Doctrine\ORM\EntityManager;
 
 class MealplanRate extends Rate
@@ -21,16 +22,28 @@ class MealplanRate extends Rate
 
         $rules = $this->em->createQuery(
             "
-            SELECT r.id, r.description
+            SELECT r.id,
+                   r.description,
+                   (
+                       SELECT COUNT(c)
+                       FROM Tillikum\Entity\Billing\Rule\Config\MealplanBooking c
+                       JOIN c.rule rInner
+                       WHERE r = rInner AND c.end >= :currentDate
+                   ) AS hasCurrentConfig
             FROM Tillikum\Entity\Billing\Rule\MealplanBooking r
             ORDER BY r.description ASC
             "
         )
+            ->setParameter('currentDate', new DateTime())
             ->getResult();
 
-        $multiOptions = array('' => '');
+        $multiOptions = array('Active (as of today)' => array(), 'Archived' => array(),);
         foreach ($rules as $rule) {
-            $multiOptions[$rule['id']] = $rule['description'];
+            if ($rule['hasCurrentConfig'] > 0) {
+                $multiOptions['Active (as of today)'][$rule['id']] = $rule['description'];
+            } else {
+                $multiOptions['Archived'][$rule['id']] = $rule['description'];
+            }
         }
 
         $this->rule_id->setMultiOptions($multiOptions);
