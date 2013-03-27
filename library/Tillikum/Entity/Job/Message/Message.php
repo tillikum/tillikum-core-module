@@ -58,10 +58,6 @@ class Message extends Entity
      */
     public function prePersistListener()
     {
-        foreach (array('created_at') as $attr) {
-            if (!isset($this->$attr)) {
-                $this->$attr = new DateTime();
-            }
-        }
+        $this->created_at = new DateTime();
     }
 }
