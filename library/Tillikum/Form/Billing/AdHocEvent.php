@@ -148,7 +148,7 @@ class AdHocEvent extends \Tillikum_Form
             ->setParameter('currentDate', new DateTime())
             ->getResult();
 
-        $multiOptions = array('Active (as of today)' => array(), 'Archived' => array(),);
+        $multiOptions = array('Active (as of today)' => array('' => ''), 'Archived' => array(),);
         foreach ($rules as $rule) {
             if ($rule['hasCurrentConfig'] > 0) {
                 $multiOptions['Active (as of today)'][$rule['id']] = $rule['description'];
