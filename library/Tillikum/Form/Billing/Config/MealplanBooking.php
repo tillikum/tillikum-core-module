@@ -9,7 +9,7 @@
 
 namespace Tillikum\Form\Billing\Config;
 
-class FacilityBooking extends Config
+class MealplanBooking extends Config
 {
     public $entity;
 
