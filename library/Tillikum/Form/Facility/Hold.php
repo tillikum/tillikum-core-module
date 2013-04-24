@@ -148,21 +148,28 @@ class Hold extends \Tillikum_Form
         $endDate = new DateTime($data['end']);
 
         if ($startDate > $endDate) {
-            $this->start->addError($this->getTranslator()->translate(
-                'The start date must be on or before the end date.'
-            ));
+            $this->start->addError(
+                $this->getTranslator()->translate(
+                    'The start date must be on or before the end date.'
+                )
+            );
 
-            $this->end->addError($this->getTranslator()->translate(
-                'The end date must be on or after the start date.'
-            ));
+            $this->end->addError(
+                $this->getTranslator()->translate(
+                    'The end date must be on or after the start date.'
+                )
+            );
 
             return false;
         }
 
-        $facility = $this->em->find('Tillikum\Entity\Facility\Facility', $data['facility_id']);
+        $facility = $this->em->find(
+            'Tillikum\Entity\Facility\Facility',
+            $data['facility_id']
+        );
 
-        $qb = $this->em->createQueryBuilder()
-            ->select('h.start, h.end')
+        $holdQueryBuilder = $this->em->createQueryBuilder()
+            ->select('h')
             ->from('Tillikum\Entity\Facility\Hold\Hold', 'h')
             ->where('h.start <= :proposedEnd')
             ->andWhere('h.end >= :proposedStart')
@@ -172,18 +179,47 @@ class Hold extends \Tillikum_Form
             ->setParameter('proposedEnd', $endDate);
 
         if ($this->entity && isset($this->entity->id)) {
-            $qb->andWhere('h != :entity')
-            ->setParameter('entity', $this->entity);
+            $holdQueryBuilder->andWhere('h != :entity')
+                ->setParameter('entity', $this->entity);
+
         }
 
-        if (count($rows = $qb->getQuery()->getResult()) > 0) {
-            foreach ($rows as $row) {
+        $holds = $holdQueryBuilder
+            ->getQuery()
+            ->getResult();
+
+        $bookings = $this->em->createQueryBuilder()
+            ->select('b')
+            ->from('Tillikum\Entity\Booking\Facility\Facility', 'b')
+            ->where('b.start <= :proposedEnd')
+            ->andWhere('b.end >= :proposedStart')
+            ->andWhere('b.facility = :facility')
+            ->setParameter('facility', $facility)
+            ->setParameter('proposedStart', $startDate)
+            ->setParameter('proposedEnd', $endDate)
+            ->getQuery()
+            ->getResult();
+
+        $configs = $this->em->createQueryBuilder()
+            ->select('c')
+            ->from('Tillikum\Entity\Facility\Config\Config', 'c')
+            ->where('c.start <= :proposedEnd')
+            ->andWhere('c.end >= :proposedStart')
+            ->andWhere('c.facility = :facility')
+            ->setParameter('facility', $facility)
+            ->setParameter('proposedStart', $startDate)
+            ->setParameter('proposedEnd', $endDate)
+            ->getQuery()
+            ->getResult();
+
+        if (count($holds) > 0) {
+            foreach ($holds as $hold) {
                 $errorMessage = sprintf(
                     $this->getTranslator()->translate(
                         'An existing hold from %s to %s overlaps your intended hold.'
                     ),
-                    $row['start']->format('Y-m-d'),
-                    $row['end']->format('Y-m-d')
+                    $hold->start->format('Y-m-d'),
+                    $hold->end->format('Y-m-d')
                 );
 
                 $this->start->addError($errorMessage);
@@ -193,40 +229,77 @@ class Hold extends \Tillikum_Form
             return false;
         }
 
-        $minCapacity = $this->em->createQueryBuilder()
-        ->select('MIN(c.capacity)')
-        ->from('Tillikum\Entity\Facility\Config\Config', 'c')
-        ->where('c.start <= :proposedEnd')
-        ->andWhere('c.end >= :proposedStart')
-        ->andWhere('c.facility = :facility')
-        ->setParameter('facility', $facility)
-        ->setParameter('proposedStart', $startDate)
-        ->setParameter('proposedEnd', $endDate)
-        ->getQuery()
-        ->getSingleScalarResult();
+        $configCapacity = PHP_INT_MAX;
+        foreach ($configs as $config) {
+            $configCapacity = min($configCapacity, $config->capacity);
+        }
 
-        $bookingCount = $this->em->createQueryBuilder()
-        ->select('COUNT(b.id)')
-        ->from('Tillikum\Entity\Booking\Facility\Facility', 'b')
-        ->where('b.start <= :proposedEnd')
-        ->andWhere('b.end >= :proposedStart')
-        ->andWhere('b.facility = :facility')
-        ->setParameter('facility', $facility)
-        ->setParameter('proposedStart', $startDate)
-        ->setParameter('proposedEnd', $endDate)
-        ->getQuery()
-        ->getSingleScalarResult();
+        $moments = array();
+        foreach ($bookings as $booking) {
+            $moments[] = array(
+                'date' => $booking->start,
+                'value' => 1
+            );
+            $moments[] = array(
+                'date' => $booking->end,
+                'value' => -1
+            );
+        }
 
-        if ((int) $data['space'] + $bookingCount > $minCapacity) {
-            $this->space->addError(sprintf(
+        foreach ($holds as $hold) {
+            $moments[] = array(
+                'date' => $hold->start,
+                'value' => $hold->space,
+            );
+            $moments[] = array(
+                'date' => $hold->end,
+                'value' => $hold->space * -1,
+            );
+        }
+
+        $customSort = function ($a, $b) {
+            if ($a['date'] == $b['date']) {
+                if ($a['value'] == $b['value']) {
+                    return 0;
+                }
+
+                // Positive values come first, so same-day start/ends are
+                // incremented before they are decremented
+                return $a['value'] > $b['value'] ? -1 : 1;
+            }
+
+            return $a['date'] < $b['date'] ? -1 : 1;
+        };
+
+        usort($moments, $customSort);
+
+        $currentCount = 0;
+        $highestCount = 0;
+        $highestStart = null;
+        foreach ($moments as $moment) {
+            $currentCount += $moment['value'];
+
+            if ($currentCount > $highestCount) {
+                $highestStart = $moment['date'];
+                $highestCount = $currentCount;
+            }
+        }
+
+        if ($highestCount >= $configCapacity) {
+            $errorMessage = sprintf(
                 $this->getTranslator()->translate(
-                    'Sorry, based on the number of people booked (%s) and the minimum'
-                  . ' configuration capacity of the facility (%s), you are not able to'
-                  . ' place a hold of this size on this facility at this time.'
+                    'There is no available space in this facility to add another ' .
+                    'hold during the specified time period. The minimum ' .
+                    'configured space is %s, but there are %s bookings ' .
+                    'and/or held spaces starting on %s.'
                 ),
-                $bookingCount,
-                $minCapacity
-            ));
+                $configCapacity,
+                $highestCount,
+                $highestStart ? $highestStart->format('Y-m-d') : '[no date]'
+            );
+
+            $this->start->addError($errorMessage);
+            $this->end->addError($errorMessage);
 
             return false;
         }
