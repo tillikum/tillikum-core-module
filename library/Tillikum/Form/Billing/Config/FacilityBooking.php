@@ -17,7 +17,7 @@ class FacilityBooking extends Config
     {
         parent::bind($entity);
 
-        $this->currency->setValue($entity->currency);
+        $this->currency->setValue($entity->currency ?: 'USD');
         $this->amount->setValue($entity->amount);
 
         return $this;
