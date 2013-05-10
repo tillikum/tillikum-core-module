@@ -13,6 +13,7 @@ use DateTime;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ORM\Mapping as ORM;
 use Tillikum\Entity\Entity;
+use Tillikum\Entity\Person\Address;
 
 /**
  * @ORM\Entity(repositoryClass="Tillikum\Repository\Person\Person")
@@ -209,7 +210,7 @@ class Person extends Entity
     }
 
     /**
-     * Fetch the user’s display name, if it exists
+     * Get the user’s display name, if it exists
      *
      * If the display name does not exist, it will format the user’s name as
      * "family_name, given_name middle_name".
@@ -228,5 +229,62 @@ class Person extends Entity
             $this->given_name ? ', ' . $this->given_name : '',
             $this->middle_name ? ' ' . $this->middle_name : ''
         );
+    }
+
+    /**
+     * Get the user’s primary email address
+     *
+     * If no primary email address exists, null will be returned.
+     *
+     * @return Address\Email|null
+     */
+    public function getPrimaryEmail()
+    {
+        $primaryEmail = null;
+        foreach ($this->emails as $email) {
+            if ($email->is_primary) {
+                $primaryEmail = $email;
+            }
+        }
+
+        return $primaryEmail ? clone $primaryEmail : null;
+    }
+
+    /**
+     * Get the user’s primary phone number
+     *
+     * If no primary phone number exists, null will be returned.
+     *
+     * @return Address\PhoneNumber|null
+     */
+    public function getPrimaryPhoneNumber()
+    {
+        $primaryPhone = null;
+        foreach ($this->phone_numbers as $phone) {
+            if ($phone->is_primary) {
+                $primaryPhone = $phone;
+            }
+        }
+
+        return $primaryPhone ? clone $primaryPhone : null;
+    }
+
+    /**
+     * Get the user’s primary street address
+     *
+     * If no primary street address exists, null will be returned.
+     *
+     * @return Address\Street|null
+     */
+    public function getPrimaryStreetAddress()
+    {
+        $primaryAddress = null;
+        foreach ($this->addresses as $address) {
+            if ($address->is_primary) {
+                $primaryAddress = $address;
+            }
+        }
+
+        return $primaryAddress ? clone $primaryAddress : null;
     }
 }
