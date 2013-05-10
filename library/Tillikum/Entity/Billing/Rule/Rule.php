@@ -36,13 +36,6 @@ class Rule extends Entity
     protected $id;
 
     /**
-     * @deprecated transitional only - do not use
-     * @todo remove after CouchDB -> Tillikum migration
-     * @ORM\Column
-     */
-    protected $old_id;
-
-    /**
      * @ORM\OneToMany(targetEntity="Tillikum\Entity\Billing\Rule\Config\Config", mappedBy="rule", cascade={"all"})
      * @ORM\OrderBy({"start"="ASC"})
      */
