@@ -11,8 +11,18 @@ namespace Tillikum\Common\Contract;
 
 use Doctrine\Common\Collections\ArrayCollection;
 
+/**
+ * Operations on contract signature collections
+ */
 final class Signatures
 {
+    /**
+     * Create filter that keeps active contracts
+     *
+     * Active contracts are both <b>signed</b> and <b>not cancelled</b>.
+     *
+     * @return callable
+     */
     public static function createIsActiveFilter()
     {
         return function ($signature) {
@@ -30,6 +40,15 @@ final class Signatures
         };
     }
 
+    /**
+     * Test if a collection of contracts are valid
+     *
+     * Valid contracts are <b>signed</b>, <b>not cancelled</b>, and
+     * <b>co-signed</b> if necessary.
+     *
+     * @param  ArrayCollection $signatures
+     * @return bool
+     */
     public static function areValid(ArrayCollection $signatures)
     {
         $isActiveFilter = self::createIsActiveFilter();
