@@ -10,8 +10,9 @@
 namespace Tillikum\Form\Person;
 
 use Doctrine\ORM\EntityManager;
+use Tillikum\ORM\EntityManagerAwareInterface;
 
-class Person extends \Tillikum_Form
+class Person extends \Tillikum_Form implements EntityManagerAwareInterface
 {
     protected $boundDisplayName;
     protected $em;

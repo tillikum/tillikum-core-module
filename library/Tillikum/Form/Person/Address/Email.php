@@ -10,8 +10,9 @@
 namespace Tillikum\Form\Person\Address;
 
 use Doctrine\ORM\EntityManager;
+use Tillikum\ORM\EntityManagerAwareInterface;
 
-class Email extends \Tillikum_Form
+class Email extends \Tillikum_Form implements EntityManagerAwareInterface
 {
     protected $em;
     protected $entity;

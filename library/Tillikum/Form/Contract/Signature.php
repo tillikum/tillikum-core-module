@@ -11,8 +11,9 @@ namespace Tillikum\Form\Contract;
 
 use DateTime;
 use Doctrine\ORM\EntityManager;
+use Tillikum\ORM\EntityManagerAwareInterface;
 
-class Signature extends \Tillikum_Form
+class Signature extends \Tillikum_Form implements EntityManagerAwareInterface
 {
     public $entity;
 

@@ -10,8 +10,9 @@
 namespace Tillikum\Form\Facility;
 
 use Doctrine\ORM\EntityManager;
+use Tillikum\ORM\EntityManagerAwareInterface;
 
-class Room extends \Tillikum_Form
+class Room extends \Tillikum_Form implements EntityManagerAwareInterface
 {
     protected $em;
 

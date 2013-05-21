@@ -11,8 +11,9 @@ namespace Tillikum\Form\Billing;
 
 use DateTime;
 use Doctrine\ORM\EntityManager;
+use Tillikum\ORM\EntityManagerAwareInterface;
 
-class AdHocEvent extends \Tillikum_Form
+class AdHocEvent extends \Tillikum_Form implements EntityManagerAwareInterface
 {
     protected $em;
 

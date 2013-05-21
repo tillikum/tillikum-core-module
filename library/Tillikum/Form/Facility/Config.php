@@ -11,10 +11,11 @@ namespace Tillikum\Form\Facility;
 
 use DateTime;
 use Doctrine\ORM\EntityManager;
+use Tillikum\ORM\EntityManagerAwareInterface;
 use Tillikum\Specification\Specification\GenderMatch as GenderMatchSpecification;
 use Vo\DateRange;
 
-class Config extends \Tillikum_Form
+class Config extends \Tillikum_Form implements EntityManagerAwareInterface
 {
     protected $em;
 

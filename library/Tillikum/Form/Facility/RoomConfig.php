@@ -10,8 +10,9 @@
 namespace Tillikum\Form\Facility;
 
 use Doctrine\ORM\EntityManager;
+use Tillikum\ORM\EntityManagerAwareInterface;
 
-class RoomConfig extends Config
+class RoomConfig extends Config implements EntityManagerAwareInterface
 {
     public function bind($entity)
     {

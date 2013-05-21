@@ -11,8 +11,9 @@ namespace Tillikum\Form\FacilityGroup;
 
 use DateTime;
 use Doctrine\ORM\EntityManager;
+use Tillikum\ORM\EntityManagerAwareInterface;
 
-class Config extends \Tillikum_Form
+class Config extends \Tillikum_Form implements EntityManagerAwareInterface
 {
     protected $em;
 

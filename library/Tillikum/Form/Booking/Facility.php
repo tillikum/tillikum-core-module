@@ -11,10 +11,11 @@ namespace Tillikum\Form\Booking;
 
 use DateTime;
 use Doctrine\ORM\EntityManager;
+use Tillikum\ORM\EntityManagerAwareInterface;
 use Tillikum\Specification\Specification\GenderMatch as GenderMatchSpecification;
 use Vo\DateRange;
 
-class Facility extends \Tillikum_Form
+class Facility extends \Tillikum_Form implements EntityManagerAwareInterface
 {
     public $booking;
 

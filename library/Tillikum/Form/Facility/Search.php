@@ -11,8 +11,9 @@ namespace Tillikum\Form\Facility;
 
 use DateTime;
 use Doctrine\ORM\EntityManager;
+use Tillikum\ORM\EntityManagerAwareInterface;
 
-class Search extends \Tillikum_Form
+class Search extends \Tillikum_Form implements EntityManagerAwareInterface
 {
     protected $entityManager;
 

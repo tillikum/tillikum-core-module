@@ -11,8 +11,9 @@ namespace Tillikum\Form\Booking;
 
 use DateTime;
 use Doctrine\ORM\EntityManager;
+use Tillikum\ORM\EntityManagerAwareInterface;
 
-class MealplanRate extends Rate
+class MealplanRate extends Rate implements EntityManagerAwareInterface
 {
     protected $em;
 
