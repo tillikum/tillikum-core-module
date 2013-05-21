@@ -9,16 +9,13 @@
 
 namespace Tillikum\Application\Resource;
 
+use Bisna\Application\Resource\Doctrine as BisnaDoctrineResource;
 use Bisna\Doctrine\Container;
 use Doctrine\ORM\Proxy\Autoloader as ProxyAutoloader;
+use Tillikum\Listener\ExtensionMetadata as ExtensionMetadataListener;
 
-class Doctrine extends \Zend_Application_Resource_ResourceAbstract
+class Doctrine extends BisnaDoctrineResource
 {
-    /**
-     * @var Container
-     */
-    protected $container;
-
     /**
      * @return Container
      */
@@ -37,16 +34,13 @@ class Doctrine extends \Zend_Application_Resource_ResourceAbstract
             );
         }
 
-        $this->container = new Container($options);
+        $container = parent::init();
 
-        return $this->container;
-    }
+        $entityManager = $container->getEntityManager();
+        $eventManager = $entityManager->getEventManager();
 
-    /**
-     * @return Container
-     */
-    public function getContainer()
-    {
-        return $this->container;
+        $eventManager->addEventSubscriber(new ExtensionMetadataListener());
+
+        return $container;
     }
 }
