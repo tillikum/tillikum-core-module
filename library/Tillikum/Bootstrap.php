@@ -10,6 +10,7 @@
 namespace Tillikum;
 
 use Zend\Log\Logger;
+use Zend\Session;
 
 /**
  * Perform global initialization tasks
@@ -76,5 +77,21 @@ class Bootstrap extends \Zend_Application_Bootstrap_Bootstrap
     public function _initPrecision()
     {
         bcscale(16);
+    }
+
+    /**
+     * Session manager initialization
+     *
+     * @return null
+     */
+    public function _initSessionManager()
+    {
+        $this->bootstrap('Di');
+
+        $di = $this->getResource('Di');
+
+        Session\Container::setDefaultManager(
+            $di->get('Zend\Session\SessionManager')
+        );
     }
 }

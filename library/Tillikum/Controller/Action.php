@@ -37,7 +37,7 @@ abstract class Tillikum_Controller_Action extends Zend_Controller_Action
     {
         $serviceManager = $this->getServiceManager();
 
-        return $serviceManager->get('EntityManager');
+        return $serviceManager->get('doctrine.entitymanager.orm_default');
     }
 
     public function getLog()

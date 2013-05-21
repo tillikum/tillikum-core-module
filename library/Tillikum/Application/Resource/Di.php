@@ -11,7 +11,6 @@ namespace Tillikum\Application\Resource;
 
 use Zend\Db;
 use Zend\Di as ZendDi;
-use Zend\Session;
 
 class Di extends \Zend_Application_Resource_ResourceAbstract
 {
@@ -24,15 +23,15 @@ class Di extends \Zend_Application_Resource_ResourceAbstract
     {
         $options = $this->getOptions();
 
+        $doctrineContainer = $this->getBootstrap()
+            ->bootstrap('Doctrine')
+            ->getResource('Doctrine');
+
         $di = new ZendDi\Di(
             null,
             null,
             new ZendDi\Config($options)
         );
-
-        $doctrineContainer = $this->getBootstrap()
-            ->bootstrap('Doctrine')
-            ->getResource('Doctrine');
 
         $di->instanceManager()->addSharedInstance(
             new Db\Adapter\Driver\Pdo\Pdo(
@@ -45,16 +44,7 @@ class Di extends \Zend_Application_Resource_ResourceAbstract
 
         $di->instanceManager()->addSharedInstance(
             $doctrineContainer->getEntityManager(),
-            'EntityManager'
-        );
-
-        $di->instanceManager()->addSharedInstance(
-            $di,
-            'Di'
-        );
-
-        Session\Container::setDefaultManager(
-            $di->get('Zend\Session\SessionManager')
+            'Doctrine\ORM\EntityManager'
         );
 
         return $di;

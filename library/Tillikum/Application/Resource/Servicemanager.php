@@ -26,6 +26,10 @@ class Servicemanager extends \Zend_Application_Resource_ResourceAbstract
             ->bootstrap('Di')
             ->getResource('Di');
 
+        $doctrineContainer = $this->getBootstrap()
+            ->bootstrap('Doctrine')
+            ->getResource('Doctrine');
+
         $serviceManager = new ZendServiceManager\ServiceManager(
             new ZendServiceManager\Config($options)
         );
@@ -33,6 +37,11 @@ class Servicemanager extends \Zend_Application_Resource_ResourceAbstract
         $serviceManager->setService(
             'Di',
             $di
+        );
+
+        $serviceManager->setService(
+            'doctrine.entitymanager.orm_default',
+            $doctrineContainer->getEntityManager()
         );
 
         $serviceManager->addAbstractFactory(
