@@ -24,7 +24,7 @@ class AdHocEvent extends \Tillikum_Form implements EntityManagerAwareInterface
         $this->entity = $entity;
 
         $this->rule_id->setValue($entity->rule ? $entity->rule->id : '');
-        $this->currency->setValue($entity->currency);
+        $this->currency->setValue($entity->currency ?: 'USD');
         $this->amount->setValue($entity->amount);
         $this->effective->setValue($entity->effective ? $entity->effective->format('Y-m-d') : '');
         $this->description->setValue($entity->description);
