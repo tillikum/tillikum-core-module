@@ -86,9 +86,6 @@ class BookingProcessor extends AbstractProcessor
                 $entry->amount *= -1;
             }
 
-            $entry->events->add($event);
-            $event->entries->add($entry);
-
             $entries->add($entry);
         }
 

@@ -146,8 +146,10 @@ class BillingEventProcessor extends AbstractJob
             try {
                 $entries = $processor->process($event);
 
-                if ($job->is_dry_run) {
-                    $event->entries = new ArrayCollection();
+                if (!$job->is_dry_run) {
+                    foreach ($entries as $entry) {
+                        $event->addEntry($entry);
+                    }
                 }
             } catch (\Exception $e) {
                 $message = new Entity\Job\Message\Message();

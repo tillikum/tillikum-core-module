@@ -61,9 +61,6 @@ class AdHocProcessor extends AbstractProcessor
         $strategyEntries = $strategy->process($event, $config);
 
         foreach ($strategyEntries as $entry) {
-            $entry->events->add($event);
-            $event->entries->add($entry);
-
             $entries->add($entry);
         }
 

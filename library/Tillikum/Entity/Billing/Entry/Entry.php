@@ -12,6 +12,7 @@ namespace Tillikum\Entity\Billing\Entry;
 use DateTime;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ORM\Mapping as ORM;
+use Tillikum\Entity\Billing\Event\Event;
 use Tillikum\Entity\Entity;
 
 /**
@@ -85,5 +86,15 @@ class Entry extends Entity
     public function prePersistListener()
     {
         $this->created_at = new DateTime();
+    }
+
+    /**
+     * Associate a billing event with this entry
+     *
+     * @param Event $event
+     */
+    public function addEvent(Event $event)
+    {
+        $this->events->add($event);
     }
 }
