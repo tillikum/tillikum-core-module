@@ -11,6 +11,8 @@ namespace Tillikum\Form\Facility;
 
 use DateTime;
 use Doctrine\ORM\EntityManager;
+use Tillikum\Common\Occupancy\Engine as OccupancyEngine;
+use Tillikum\Common\Occupancy\Input as OccupancyInput;
 use Tillikum\ORM\EntityManagerAwareInterface;
 
 class Hold extends \Tillikum_Form implements EntityManagerAwareInterface
@@ -175,6 +177,7 @@ class Hold extends \Tillikum_Form implements EntityManagerAwareInterface
             ->where('h.start <= :proposedEnd')
             ->andWhere('h.end >= :proposedStart')
             ->andWhere('h.facility = :facility')
+            ->orderBy('h.start')
             ->setParameter('facility', $facility)
             ->setParameter('proposedStart', $startDate)
             ->setParameter('proposedEnd', $endDate);
@@ -195,6 +198,7 @@ class Hold extends \Tillikum_Form implements EntityManagerAwareInterface
             ->where('b.start <= :proposedEnd')
             ->andWhere('b.end >= :proposedStart')
             ->andWhere('b.facility = :facility')
+            ->orderBy('b.start')
             ->setParameter('facility', $facility)
             ->setParameter('proposedStart', $startDate)
             ->setParameter('proposedEnd', $endDate)
@@ -204,12 +208,9 @@ class Hold extends \Tillikum_Form implements EntityManagerAwareInterface
         $configs = $this->em->createQueryBuilder()
             ->select('c')
             ->from('Tillikum\Entity\Facility\Config\Config', 'c')
-            ->where('c.start <= :proposedEnd')
-            ->andWhere('c.end >= :proposedStart')
-            ->andWhere('c.facility = :facility')
+            ->where('c.facility = :facility')
+            ->orderBy('c.start')
             ->setParameter('facility', $facility)
-            ->setParameter('proposedStart', $startDate)
-            ->setParameter('proposedEnd', $endDate)
             ->getQuery()
             ->getResult();
 
@@ -230,73 +231,100 @@ class Hold extends \Tillikum_Form implements EntityManagerAwareInterface
             return false;
         }
 
-        $configCapacity = PHP_INT_MAX;
-        foreach ($configs as $config) {
-            $configCapacity = min($configCapacity, $config->capacity);
+        $occupancyInputs = array(
+            new OccupancyInput(
+                $startDate,
+                $data['space'] * -1,
+                sprintf(
+                    'start of the hold you specified from %s to %s',
+                    $startDate->format('Y-m-d'),
+                    $endDate->format('Y-m-d')
+                )
+            ),
+            new OccupancyInput(
+                date_modify(clone $endDate, '+1 day'),
+                $data['space'],
+                sprintf(
+                    'end of the hold you specified from %s to %s',
+                    $startDate->format('Y-m-d'),
+                    $endDate->format('Y-m-d')
+                )
+            ),
+        );
+
+        foreach ($bookings as $booking) {
+            $occupancyInputs[] = new OccupancyInput(
+                $booking->start,
+                -1,
+                sprintf(
+                    'start of a booking from %s to %s',
+                    $booking->start->format('Y-m-d'),
+                    $booking->end->format('Y-m-d')
+                )
+            );
+
+            $occupancyInputs[] = new OccupancyInput(
+                date_modify(clone $booking->end, '+1 day'),
+                1,
+                sprintf(
+                    'end of a booking from %s to %s',
+                    $booking->start->format('Y-m-d'),
+                    $booking->end->format('Y-m-d')
+                )
+            );
         }
 
-        $moments = array();
-        foreach ($bookings as $booking) {
-            $moments[] = array(
-                'date' => $booking->start,
-                'value' => 1
+        $currentConfigSpace = 0;
+        foreach ($configs as $config) {
+            $occupancyInputs[] = new OccupancyInput(
+                $config->start,
+                // Change in space = number of new spaces available or taken,
+                // assumes configs are sorted
+                $config->capacity - $currentConfigSpace,
+                sprintf(
+                    'start of a facility configuration from %s to %s',
+                    $config->start->format('Y-m-d'),
+                    $config->end->format('Y-m-d')
+                )
             );
-            $moments[] = array(
-                'date' => $booking->end,
-                'value' => -1
-            );
+
+            $currentConfigSpace = $config->capacity;
         }
 
         foreach ($holds as $hold) {
-            $moments[] = array(
-                'date' => $hold->start,
-                'value' => $hold->space,
+            $occupancyInputs[] = new OccupancyInput(
+                $hold->start,
+                $hold->space * -1,
+                sprintf(
+                    'start of a hold from %s to %s',
+                    $hold->start->format('Y-m-d'),
+                    $hold->end->format('Y-m-d')
+                )
             );
-            $moments[] = array(
-                'date' => $hold->end,
-                'value' => $hold->space * -1,
+
+            $occupancyInputs[] = new OccupancyInput(
+                date_modify(clone $hold->end, '+1 day'),
+                $hold->space,
+                sprintf(
+                    'end of a hold from %s to %s',
+                    $hold->start->format('Y-m-d'),
+                    $hold->end->format('Y-m-d')
+                )
             );
         }
 
-        $customSort = function ($a, $b) {
-            if ($a['date'] == $b['date']) {
-                if ($a['value'] == $b['value']) {
-                    return 0;
-                }
+        $occupancyEngine = new OccupancyEngine($occupancyInputs);
 
-                // Positive values come first, so same-day start/ends are
-                // incremented before they are decremented
-                return $a['value'] > $b['value'] ? -1 : 1;
-            }
+        $occupancyResult = $occupancyEngine->run();
 
-            return $a['date'] < $b['date'] ? -1 : 1;
-        };
-
-        usort($moments, $customSort);
-
-        $currentCount = 0;
-        $highestCount = 0;
-        $highestStart = null;
-        foreach ($moments as $moment) {
-            $currentCount += $moment['value'];
-
-            if ($currentCount > $highestCount) {
-                $highestStart = $moment['date'];
-                $highestCount = $currentCount;
-            }
-        }
-
-        if ($highestCount >= $configCapacity) {
+        if (!$occupancyResult->getIsSuccess()) {
             $errorMessage = sprintf(
                 $this->getTranslator()->translate(
                     'There is no available space in this facility to add another ' .
-                    'hold during the specified time period. The minimum ' .
-                    'configured space is %s, but there are %s bookings ' .
-                    'and/or held spaces starting on %s.'
+                    'hold during the specified time period. The problem occurred ' .
+                    'at the %s.'
                 ),
-                $configCapacity,
-                $highestCount,
-                $highestStart ? $highestStart->format('Y-m-d') : '[no date]'
+                $occupancyResult->getCulprit()->getDescription()
             );
 
             $this->start->addError($errorMessage);

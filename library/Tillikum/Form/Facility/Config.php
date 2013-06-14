@@ -11,6 +11,8 @@ namespace Tillikum\Form\Facility;
 
 use DateTime;
 use Doctrine\ORM\EntityManager;
+use Tillikum\Common\Occupancy\Engine as OccupancyEngine;
+use Tillikum\Common\Occupancy\Input as OccupancyInput;
 use Tillikum\ORM\EntityManagerAwareInterface;
 use Tillikum\Specification\Specification\GenderMatch as GenderMatchSpecification;
 use Vo\DateRange;
@@ -224,6 +226,7 @@ class Config extends \Tillikum_Form implements EntityManagerAwareInterface
             ->where('b.start <= :proposedEnd')
             ->andWhere('b.end >= :proposedStart')
             ->andWhere('b.facility = :facility')
+            ->orderBy('b.start')
             ->setParameter('facility', $facility)
             ->setParameter('proposedStart', $configRange->getStart())
             ->setParameter('proposedEnd', $configRange->getEnd())
@@ -233,12 +236,9 @@ class Config extends \Tillikum_Form implements EntityManagerAwareInterface
         $qb = $this->em->createQueryBuilder()
             ->select('c')
             ->from('Tillikum\Entity\Facility\Config\Config', 'c')
-            ->where('c.start <= :proposedEnd')
-            ->andWhere('c.end >= :proposedStart')
-            ->andWhere('c.facility = :facility')
-            ->setParameter('facility', $this->entity->facility)
-            ->setParameter('proposedStart', $configRange->getStart())
-            ->setParameter('proposedEnd', $configRange->getEnd());
+            ->where('c.facility = :facility')
+            ->orderBy('c.start')
+            ->setParameter('facility', $this->entity->facility);
 
         if ($this->entity && isset($this->entity->id)) {
             $qb->andWhere('c != :entity')
@@ -248,20 +248,40 @@ class Config extends \Tillikum_Form implements EntityManagerAwareInterface
         $configs = $qb->getQuery()
             ->getResult();
 
+        $overlappingQueryBuilder = $this->em->createQueryBuilder()
+            ->select('c')
+            ->from('Tillikum\Entity\Facility\Config\Config', 'c')
+            ->where('c.start <= :proposedStart')
+            ->andWhere('c.end >= :proposedEnd')
+            ->andWhere('c.facility = :facility')
+            ->setParameter('proposedStart', $configRange->getStart())
+            ->setParameter('proposedEnd', $configRange->getEnd())
+            ->setParameter('facility', $this->entity->facility);
+
+        if ($this->entity && isset($this->entity->id)) {
+            $overlappingQueryBuilder->andWhere('c != :entity')
+                ->setParameter('entity', $this->entity);
+        }
+
+        $overlappingConfigs = $overlappingQueryBuilder
+            ->getQuery()
+            ->getResult();
+
         $holds = $this->em->createQueryBuilder()
             ->select('h')
             ->from('Tillikum\Entity\Facility\Hold\Hold', 'h')
             ->where('h.start <= :proposedEnd')
             ->andWhere('h.end >= :proposedStart')
             ->andWhere('h.facility = :facility')
+            ->orderBy('h.start')
             ->setParameter('facility', $facility)
             ->setParameter('proposedStart', $configRange->getStart())
             ->setParameter('proposedEnd', $configRange->getEnd())
             ->getQuery()
             ->getResult();
 
-        if (count($configs) > 0) {
-            foreach ($configs as $config) {
+        if (count($overlappingConfigs) > 0) {
+            foreach ($overlappingConfigs as $config) {
                 $errorMessage = sprintf(
                     $this->getTranslator()->translate(
                         'An existing configuration from %s to %s overlaps your intended configuration.'
@@ -277,9 +297,28 @@ class Config extends \Tillikum_Form implements EntityManagerAwareInterface
             return false;
         }
 
-        $configCapacity = PHP_INT_MAX;
+        $occupancyInputs = array(
+            new OccupancyInput(
+                $configRange->getStart(),
+                $data['capacity'],
+                sprintf(
+                    'start of the facility configuration you specified from %s to %s',
+                    $configRange->getStart()->format('Y-m-d'),
+                    $configRange->getEnd()->format('Y-m-d')
+                )
+            ),
+        );
+
         foreach ($configs as $config) {
-            $configCapacity = min($configCapacity, $data['capacity']);
+            $occupancyInputs[] = new OccupancyInput(
+                $config->start,
+                $config->capacity,
+                sprintf(
+                    'start of a facility configuration from %s to %s',
+                    $config->start->format('Y-m-d'),
+                    $config->end->format('Y-m-d')
+                )
+            );
 
             if (!empty($data['suite'])) {
                 $suiteConfigs = $this->em->createQueryBuilder()
@@ -305,58 +344,55 @@ class Config extends \Tillikum_Form implements EntityManagerAwareInterface
             }
         }
 
-        $moments = array();
-        foreach ($bookings as $booking) {
-            $moments[] = array(
-                'date' => $booking->start,
-                'value' => 1
-            );
-            $moments[] = array(
-                'date' => $booking->end,
-                'value' => -1
-            );
-        }
-
-        foreach ($holds as $hold) {
-            $moments[] = array(
-                'date' => $hold->start,
-                'value' => $hold->space,
-            );
-            $moments[] = array(
-                'date' => $hold->end,
-                'value' => $hold->space * -1,
-            );
-        }
-
-        $customSort = function ($a, $b) {
-            if ($a['date'] == $b['date']) {
-                if ($a['value'] == $b['value']) {
+        // We need to re-sort since the user-specified input will not be sorted
+        usort(
+            $occupancyInputs,
+            function($a, $b) {
+                if ($a->getDate() == $b->getDate()) {
                     return 0;
                 }
 
-                // Positive values come first, so same-day start/ends are
-                // incremented before they are decremented
-                return $a['value'] > $b['value'] ? -1 : 1;
+                return $a->getDate() < $b->getDate() ? -1 : 1;
             }
+        );
 
-            return $a['date'] < $b['date'] ? -1 : 1;
-        };
+        // Actually calculate moments after re-sorting
+        $currentConfigSpace = 0;
+        foreach ($occupancyInputs as $idx => $input) {
+            $oldValue = $input->getValue();
 
-        usort($moments, $customSort);
+            $occupancyInputs[$idx] = new OccupancyInput(
+                $input->getDate(),
+                // Change in space = number of new spaces available or taken,
+                // assumes configs are sorted
+                $input->getValue() - $currentConfigSpace,
+                $input->getDescription()
+            );
 
-        $currentCount = 0;
-        $highestCount = 0;
-        $highestStart = null;
-        foreach ($moments as $moment) {
-            $currentCount += $moment['value'];
-
-            if ($currentCount > $highestCount) {
-                $highestStart = $moment['date'];
-                $highestCount = $currentCount;
-            }
+            $currentConfigSpace = $oldValue;
         }
 
         foreach ($bookings as $booking) {
+            $occupancyInputs[] = new OccupancyInput(
+                $booking->start,
+                -1,
+                sprintf(
+                    'start of a booking from %s to %s',
+                    $booking->start->format('Y-m-d'),
+                    $booking->end->format('Y-m-d')
+                )
+            );
+
+            $occupancyInputs[] = new OccupancyInput(
+                date_modify(clone $booking->end, '+1 day'),
+                1,
+                sprintf(
+                    'end of a booking from %s to %s',
+                    $booking->start->format('Y-m-d'),
+                    $booking->end->format('Y-m-d')
+                )
+            );
+
             if (!empty($booking->person->gender)) {
                 $bookingGenderSpec = isset($bookingGenderSpec)
                     ? $bookingGenderSpec->andSpec(new GenderMatchSpecification($booking->person->gender))
@@ -365,6 +401,26 @@ class Config extends \Tillikum_Form implements EntityManagerAwareInterface
         }
 
         foreach ($holds as $hold) {
+            $occupancyInputs[] = new OccupancyInput(
+                $hold->start,
+                $hold->space * -1,
+                sprintf(
+                    'start of a hold from %s to %s',
+                    $hold->start->format('Y-m-d'),
+                    $hold->end->format('Y-m-d')
+                )
+            );
+
+            $occupancyInputs[] = new OccupancyInput(
+                date_modify(clone $hold->end, '+1 day'),
+                $hold->space,
+                sprintf(
+                    'end of a hold from %s to %s',
+                    $hold->start->format('Y-m-d'),
+                    $hold->end->format('Y-m-d')
+                )
+            );
+
             if (!empty($hold->gender)) {
                 $holdGenderSpec = isset($holdGenderSpec)
                     ? $holdGenderSpec->andSpec(new GenderMatchSpecification($hold->gender))
@@ -372,16 +428,19 @@ class Config extends \Tillikum_Form implements EntityManagerAwareInterface
             }
         }
 
-        if ($highestCount > $data['capacity']) {
+        $occupancyEngine = new OccupancyEngine($occupancyInputs);
+
+        $occupancyResult = $occupancyEngine->run();
+
+        if (!$occupancyResult->getIsSuccess()) {
             $this->capacity->addError(
                 sprintf(
                     $this->getTranslator()->translate(
-                        'There are too many claims on space in this facility to'
-                      . ' change the capacity of this configuration. There are'
-                      . ' %s bookings and/or held spaces starting on %s.'
+                        'There are too many claims on space in this facility ' .
+                        'to change the capacity of this configuration. The ' .
+                        'problem occurred at the %s.'
                     ),
-                    $highestCount,
-                    $highestStart ? $highestStart->format('Y-m-d') : '[no date]'
+                    $occupancyResult->getCulprit()->getDescription()
                 )
             );
 
