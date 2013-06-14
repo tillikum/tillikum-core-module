@@ -124,4 +124,41 @@ class EngineTest extends \PHPUnit_Framework_TestCase
         $this->assertFalse($result->getIsSuccess());
         $this->assertEquals('booking 2 start', $result->getCulprit()->getDescription());
     }
+
+    public function testSuccessWhenIncreaseAndDecreaseAreTheSameDate()
+    {
+        $inputs = array(
+            new Occupancy\Input(
+                new DateTime('2010-01-01'),
+                1,
+                'config 1 start'
+            ),
+            new Occupancy\Input(
+                new DateTime('2010-01-01'),
+                -1,
+                'booking 1 start'
+            ),
+            new Occupancy\Input(
+                new DateTime('2010-01-10'),
+                1,
+                'booking 1 end'
+            ),
+            new Occupancy\Input(
+                new DateTime('2010-01-10'),
+                -1,
+                'booking 2 start'
+            ),
+            new Occupancy\Input(
+                new DateTime('2010-01-20'),
+                1,
+                'booking 2 end'
+            ),
+        );
+
+        $e = new Occupancy\Engine($inputs);
+
+        $result = $e->run();
+
+        $this->assertTrue($result->getIsSuccess());
+    }
 }
