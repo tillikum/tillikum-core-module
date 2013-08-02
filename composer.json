@@ -12,8 +12,8 @@
     ],
     "autoload": {
         "psr-0": {
-            "Tillikum\\": "library/",
-            "Tillikum_": "library/"
+            "Tillikum\\": "src/",
+            "Tillikum_": "src/"
         }
     },
     "repositories": [
@@ -52,7 +52,8 @@
     },
     "require-dev": {
         "doctrine/data-fixtures": "dev-master",
-        "phing/phing": "~2.5.0"
+        "phing/phing": "~2.5.0",
+        "phpunit/phpunit": "~3.7.0"
     },
     "suggest": {
         "ext-apc": "A free and open opcode cache for PHP. Very important for performance, and useful for caching.",
