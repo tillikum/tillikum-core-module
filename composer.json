@@ -19,6 +19,10 @@
     "repositories": [
         {
             "type": "vcs",
+            "url": "https://github.com/beberlei/DoctrineExtensions"
+        },
+        {
+            "type": "vcs",
             "url": "https://github.com/gwis/php-valueobjects"
         },
         {
@@ -33,16 +37,6 @@
     "require": {
         "beberlei/DoctrineExtensions": "dev-master",
         "doctrine/orm": "~2.3.0",
-        "ext-bcmath": "*",
-        "ext-ctype": "*",
-        "ext-fileinfo": "*",
-        "ext-iconv": "*",
-        "ext-intl": "*",
-        "ext-json": "*",
-        "ext-mbstring": "*",
-        "ext-reflection": "*",
-        "ext-session": "*",
-        "ext-spl": "*",
         "guilhermeblanco/zendframework1-doctrine2": "dev-master",
         "gwis/php-valueobjects": "dev-master",
         "php": ">=5.3.3",
