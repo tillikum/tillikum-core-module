@@ -16,24 +16,6 @@
             "Tillikum_": "src/"
         }
     },
-    "repositories": [
-        {
-            "type": "vcs",
-            "url": "https://github.com/beberlei/DoctrineExtensions"
-        },
-        {
-            "type": "vcs",
-            "url": "https://github.com/gwis/php-valueobjects"
-        },
-        {
-            "type": "vcs",
-            "url": "https://github.com/guilhermeblanco/zendframework1-doctrine2"
-        },
-        {
-            "type": "vcs",
-            "url": "https://github.com/tillikum/zf2-cas-authentication-adapter"
-        }
-    ],
     "require": {
         "beberlei/DoctrineExtensions": "dev-master",
         "doctrine/orm": "~2.3.0",
