@@ -9,7 +9,6 @@
 
 namespace Tillikum;
 
-use Zend\Log\Logger;
 use Zend\Session;
 
 /**
@@ -29,42 +28,6 @@ class Bootstrap extends \Zend_Application_Bootstrap_Bootstrap
     {
         iconv_set_encoding('internal_encoding', 'UTF-8');
         mb_internal_encoding('UTF-8');
-    }
-
-    /**
-     * Initialize Tillikum error handler
-     *
-     * Uses the defined logger to log errors.
-     *
-     * @return null
-     */
-    public function _initErrorHandler()
-    {
-        $this->bootstrap('Servicemanager');
-
-        $sm = $this->getResource('Servicemanager');
-
-        $logger = $sm->get('Logger');
-
-        Logger::registerErrorHandler($logger);
-    }
-
-    /**
-     * Initialize Tillikum exception handler
-     *
-     * Uses the defined logger to log uncaught exceptions.
-     *
-     * @return null
-     */
-    public function _initExceptionHandler()
-    {
-        $this->bootstrap('Servicemanager');
-
-        $sm = $this->getResource('Servicemanager');
-
-        $logger = $sm->get('Logger');
-
-        Logger::registerExceptionHandler($logger);
     }
 
     /**
