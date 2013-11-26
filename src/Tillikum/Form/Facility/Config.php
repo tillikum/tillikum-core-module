@@ -140,9 +140,6 @@ class Config extends \Tillikum_Form implements EntityManagerAwareInterface
                 'filters' => array(
                     'Int',
                 ),
-                'validators' => array(
-                    new \Zend_Validate_GreaterThan(0),
-                ),
             )
         );
 

@@ -110,9 +110,6 @@ class Hold extends \Tillikum_Form implements EntityManagerAwareInterface
                 ),
                 'label' => 'Spaces to hold',
                 'required' => true,
-                'validators' => array(
-                    new \Zend_Validate_GreaterThan(0)
-                )
             )
         );
 

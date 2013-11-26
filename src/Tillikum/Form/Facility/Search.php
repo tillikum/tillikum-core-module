@@ -47,20 +47,20 @@ class Search extends \Tillikum_Form implements EntityManagerAwareInterface
         $capacity = new \Tillikum_Form_Element_Number(
             'capacity',
             array(
-                'label' => 'Capacity',
-                'validators' => array(
-                    new \Zend_Validate_GreaterThan(0),
+                'attribs' => array(
+                    'min' => 0,
                 ),
+                'label' => 'Capacity',
             )
         );
 
         $availableSpace = new \Tillikum_Form_Element_Number(
             'available_space',
             array(
-                'label' => 'Spaces available (at minimum)',
-                'validators' => array(
-                    new \Zend_Validate_GreaterThan(0),
+                'attribs' => array(
+                    'min' => 0,
                 ),
+                'label' => 'Spaces available (at minimum)',
             )
         );
 
