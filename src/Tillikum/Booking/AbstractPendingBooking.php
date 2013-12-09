@@ -28,7 +28,7 @@ abstract class AbstractPendingBooking implements PendingBookingInterface
     }
 
     /**
-     * Returns the default form class
+     * Returns the name of the invokable method on the action helper
      *
      * @return string
      */
@@ -78,7 +78,7 @@ abstract class AbstractPendingBooking implements PendingBookingInterface
     }
 
     /**
-     * Returns the empty string
+     * Returns the name of the invokable method on the view helper
      *
      * @return string
      */
